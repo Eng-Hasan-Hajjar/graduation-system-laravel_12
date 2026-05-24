@@ -1,74 +1,64 @@
 <?php
-// ==========================================
-// app/Http/Controllers/Auth/LoginController.php
-// ==========================================
+
 namespace App\Http\Controllers\Auth;
- 
+
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
- 
+
 class LoginController extends Controller
 {
-    public function showForm()
+    public function __construct()
+    {
+        $this->middleware('guest')->except('logout');
+    }
+
+    // ─── Show Login Form ──────────────────────────────────────────────────────
+    public function showLoginForm()
     {
         return view('auth.login');
     }
- 
+
+    // ─── Handle Login ─────────────────────────────────────────────────────────
     public function login(Request $request)
     {
-        $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required|min:6',
+        $credentials = $request->validate([
+            'email'    => ['required', 'email'],
+            'password' => ['required'],
         ]);
- 
-        $credentials = $request->only('email', 'password');
-        $remember    = $request->boolean('remember');
- 
-        if (!Auth::attempt($credentials, $remember)) {
-            throw ValidationException::withMessages([
-                'email' => __('auth.failed'),
-            ]);
+
+        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+
+            // التحقق من أن المستخدم نشط
+            if (Auth::user()->status !== 'active') {
+                Auth::logout();
+                return back()->withErrors([
+                    'email' => __('auth.account_suspended'),
+                ])->onlyInput('email');
+            }
+
+            // تحديث آخر تسجيل دخول
+            Auth::user()->update(['last_login_at' => now()]);
+
+            // تعيين اللغة من تفضيلات المستخدم
+            session(['locale' => Auth::user()->lang_preference ?? 'ar']);
+
+            $request->session()->regenerate();
+
+            return redirect()->intended(route('dashboard'));
         }
- 
-        $user = Auth::user();
- 
-        if (!$user->is_active) {
-            Auth::logout();
-            throw ValidationException::withMessages([
-                'email' => __('messages.account_deactivated'),
-            ]);
-        }
- 
-        // Update last seen
-        $user->update(['last_seen_at' => now()]);
- 
-        // Set locale from user preference
-        if ($user->locale) {
-            session(['locale' => $user->locale]);
-        }
- 
-        $request->session()->regenerate();
- 
-        // Redirect based on role
-        return redirect()->intended($this->redirectTo($user));
+
+        return back()->withErrors([
+            'email' => __('auth.failed'),
+        ])->onlyInput('email');
     }
- 
+
+    // ─── Logout ───────────────────────────────────────────────────────────────
     public function logout(Request $request)
     {
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        return redirect()->route('home')->with('success', __('messages.logged_out'));
-    }
- 
-    private function redirectTo($user): string
-    {
-        return match($user->role) {
-            'admin'   => route('admin.dashboard'),
-            'company' => route('company.dashboard'),
-            default   => route('home'),
-        };
+        return redirect()->route('login');
     }
 }
