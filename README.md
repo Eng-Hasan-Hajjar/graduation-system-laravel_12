@@ -1,276 +1,332 @@
-# 💼 Job Platform - منصة التوظيف
-### Laravel 12 | Dark/Light Mode | Arabic/English | Real-time Notifications | AI CV Analysis
+# 🎓 نظام إدارة مشاريع التخرج الذكي
+## دليل التثبيت الكامل - Terminal Commands
 
 ---
 
-## 🚀 Quick Start - التثبيت السريع
+## ⚙️ المتطلبات
+- PHP >= 8.2
+- Composer >= 2.x
+- Node.js >= 18.x & npm
+- MySQL >= 8.0
+- Git
+
+---
+
+## 📁 الخطوة 1: إنشاء المشروع
 
 ```bash
-# 1. Create Laravel 12 project
-composer create-project laravel/laravel jobplatform "^12.0"
-cd jobplatform
+# إنشاء مشروع Laravel 12 جديد
+composer create-project laravel/laravel graduation-system "12.*"
 
-# 2. Install required packages
-composer require smalot/pdfparser phpoffice/phpword intervention/image
+# الدخول إلى مجلد المشروع
+cd graduation-system
+```
 
-# 3. Copy all project files to respective directories
+---
 
-# 4. Configure .env
+## 📦 الخطوة 2: تثبيت الحزم المطلوبة
+
+```bash
+# حزمة واجهة المستخدم (Bootstrap)
+composer require laravel/ui
+
+# إنشاء واجهة Bootstrap مع المصادقة
+php artisan ui bootstrap --auth
+
+# تثبيت اعتماديات Node
+npm install
+
+# بناء الملفات (Development)
+npm run dev
+
+# أو بناء للإنتاج
+npm run build
+```
+
+---
+
+## 🗄️ الخطوة 3: إعداد قاعدة البيانات
+
+```bash
+# أولاً: أنشئ قاعدة بيانات في MySQL
+mysql -u root -p
+```
+
+```sql
+CREATE DATABASE graduation_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'grad_user'@'localhost' IDENTIFIED BY 'StrongPassword123!';
+GRANT ALL PRIVILEGES ON graduation_system.* TO 'grad_user'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+---
+
+## 🔧 الخطوة 4: إعداد ملف .env
+
+```bash
+# نسخ ملف الإعدادات
 cp .env.example .env
+
+# توليد مفتاح التطبيق
 php artisan key:generate
 ```
 
-### .env Configuration
+**عدّل ملف `.env` بالبيانات التالية:**
+
 ```env
-APP_NAME="Job Portal"
+APP_NAME="نظام إدارة مشاريع التخرج"
+APP_ENV=local
+APP_DEBUG=true
 APP_URL=http://localhost:8000
-APP_LOCALE=en
+APP_LOCALE=ar
+APP_FALLBACK_LOCALE=en
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=jobplatform
-DB_USERNAME=root
-DB_PASSWORD=
+DB_DATABASE=graduation_system
+DB_USERNAME=grad_user
+DB_PASSWORD=StrongPassword123!
 
-QUEUE_CONNECTION=database
-MAIL_MAILER=smtp
-MAIL_HOST=mailpit
-MAIL_PORT=1025
-```
-
-```bash
-# 5. Run migrations & seed
-php artisan migrate:fresh --seed
-
-# 6. Create storage link
-php artisan storage:link
-
-# 7. Create private disk in config/filesystems.php
-# Add: 'private' => ['driver' => 'local', 'root' => storage_path('app/private')]
-
-# 8. Register middleware in bootstrap/app.php
-# Add SetLocale and CheckRole middleware
-
-# 9. Start queue worker (for notifications & CV analysis)
-php artisan queue:work --queue=default &
-
-# 10. Start server
-php artisan serve
+FILESYSTEM_DISK=public
 ```
 
 ---
 
-## 📁 File Structure / هيكل الملفات
+## 📂 الخطوة 5: نسخ ملفات المشروع
 
-```
-jobplatform/
+انسخ جميع الملفات من هذا المجلد إلى مجلد مشروع Laravel:
+
+```bash
+# بنية الملفات المطلوبة:
+graduation-system/
 ├── app/
 │   ├── Http/
 │   │   ├── Controllers/
-│   │   │   ├── HomeController.php
-│   │   │   ├── JobController.php
-│   │   │   ├── CompanyController.php
-│   │   │   ├── NotificationController.php
-│   │   │   ├── LanguageController.php
-│   │   │   ├── User/
-│   │   │   │   ├── ProfileController.php
-│   │   │   │   └── ApplicationController.php
-│   │   │   ├── Company/
-│   │   │   │   ├── DashboardController.php
-│   │   │   │   ├── JobController.php
-│   │   │   │   ├── ApplicationController.php
-│   │   │   │   └── ProfileController.php
-│   │   │   └── Admin/
-│   │   │       ├── DashboardController.php
-│   │   │       ├── UserController.php
-│   │   │       ├── CompanyController.php
-│   │   │       ├── JobController.php
-│   │   │       └── NotificationController.php
+│   │   │   ├── DashboardController.php
+│   │   │   ├── ProjectController.php
+│   │   │   ├── ProjectIdeaController.php
+│   │   │   ├── CommitteeDefenseController.php  ← يحتوي CommitteeController & DefenseScheduleController
+│   │   │   └── UserReportController.php        ← يحتوي ReportController & UserController
 │   │   └── Middleware/
 │   │       ├── SetLocale.php
 │   │       └── CheckRole.php
 │   ├── Models/
+│   │   ├── University.php
+│   │   ├── College.php
+│   │   ├── Department.php
 │   │   ├── User.php
-│   │   ├── Job.php
-│   │   ├── Company.php
-│   │   ├── JobApplication.php
-│   │   ├── Category.php
-│   │   └── CompanyReview.php
-│   ├── Notifications/
-│   │   ├── ApplicationReceived.php
-│   │   ├── ApplicationStatusChanged.php
-│   │   ├── ApplicationSubmitted.php
-│   │   ├── NewJobPosted.php
-│   │   └── AdminBroadcastNotification.php
-│   ├── Services/
-│   │   ├── CvAnalysisService.php
-│   │   └── JobRecommendationService.php
-│   └── Jobs/
-│       ├── AnalyzeCvJob.php
-│       └── NotifySubscribedUsers.php
-├── resources/
-│   ├── views/
-│   │   ├── layouts/
-│   │   │   ├── app.blade.php
-│   │   │   └── auth.blade.php
-│   │   ├── components/
-│   │   │   ├── navbar.blade.php
-│   │   │   ├── sidebar.blade.php
-│   │   │   ├── job-card.blade.php
-│   │   │   ├── notification-panel.blade.php
-│   │   │   └── flash-messages.blade.php
-│   │   ├── auth/
-│   │   │   ├── login.blade.php
-│   │   │   └── register.blade.php
-│   │   ├── home.blade.php
-│   │   ├── jobs/
-│   │   │   ├── index.blade.php
-│   │   │   └── show.blade.php
-│   │   ├── user/
-│   │   │   ├── profile.blade.php
-│   │   │   └── applications.blade.php
-│   │   ├── company/
-│   │   │   └── dashboard.blade.php
-│   │   ├── admin/
-│   │   │   └── dashboard.blade.php
-│   │   └── notifications/
-│   │       └── index.blade.php
-│   └── lang/
-│       ├── ar/messages.php
-│       └── en/messages.php
-├── public/
-│   ├── css/app.css
-│   └── js/app.js
-├── routes/web.php
-└── database/
-    ├── migrations/
-    └── seeders/DatabaseSeeder.php
+│   │   ├── AcademicYear.php
+│   │   ├── Semester.php
+│   │   ├── ProjectIdea.php
+│   │   ├── Project.php
+│   │   ├── Committee.php
+│   │   ├── ProjectMilestone.php
+│   │   ├── ProjectModels.php  ← يحتوي ProjectReport, ProjectFile, DefenseSchedule, SupervisorEvaluation
+│   │   └── ActivityLog.php
+│   ├── Policies/
+│   │   └── ProjectPolicy.php
+│   └── Providers/
+│       ├── AppServiceProvider.php
+│       └── AuthServiceProvider.php
+├── bootstrap/
+│   └── app.php
+├── database/
+│   ├── migrations/
+│   │   ├── 2024_01_01_000001_create_universities_table.php
+│   │   ├── 2024_01_01_000002_create_colleges_departments_table.php
+│   │   ├── 2024_01_01_000003_create_users_table.php
+│   │   ├── 2024_01_01_000004_create_academic_years_table.php
+│   │   ├── 2024_01_01_000005_create_project_ideas_table.php
+│   │   ├── 2024_01_01_000006_create_projects_table.php
+│   │   ├── 2024_01_01_000007_create_project_students_committees_table.php
+│   │   ├── 2024_01_01_000008_create_project_details_table.php
+│   │   └── 2024_01_01_000009_create_notifications_logs_table.php
+│   └── seeders/
+│       ├── DatabaseSeeder.php
+│       ├── UniversitySeeder.php
+│       ├── CollegeDepartmentSeeder.php
+│       ├── UserSeeder.php
+│       ├── AcademicYearSeeder.php
+│       ├── ProjectIdeaSeeder.php
+│       ├── ProjectSeeder.php
+│       ├── CommitteeSeeder.php
+│       └── DefenseScheduleSeeder.php  ← يحتوي DefenseScheduleSeeder & SettingSeeder
+├── lang/
+│   ├── ar/messages.php
+│   └── en/messages.php
+├── resources/views/
+│   ├── layouts/app.blade.php
+│   ├── dashboard/admin.blade.php
+│   └── projects/
+│       ├── index.blade.php
+│       └── show.blade.php
+└── routes/web.php
 ```
 
 ---
 
-## 🔑 Test Accounts / حسابات الاختبار
+## ⚠️ الخطوة 6: فصل Controllers من الملفات المجمّعة
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@jobportal.com | password |
-| Company | company@techcorp.com | password |
-| User | user@example.com | password |
-
----
-
-## ✨ Features / المميزات
-
-### 🌐 Bilingual Support
-- Arabic (RTL) / English (LTR)
-- Language toggle in navbar
-- Stored per user in database
-
-### 🌙 Dark / Light Mode
-- Toggle button in navbar
-- Saved in localStorage
-- Full CSS variable system
-
-### 🔔 Notification System
-- Real-time polling every 30 seconds
-- Badge counter with pulse animation
-- Notification dropdown panel
-- Full notifications page with filters
-- Email notifications via queue
-- Types: job, application, system, alert
-- Mark read / mark all read
-- Delete notifications
-- Admin bulk notifications
-
-### 📄 CV Analysis (PDF/DOCX)
-- Powered by `smalot/pdfparser` + `phpoffice/phpword`
-- Extracts: technical skills, soft skills, languages, education
-- Estimates years of experience
-- Calculates CV score (0-100)
-- Extracts contact info (email, phone, LinkedIn, GitHub)
-- Runs in background via Laravel Queue
-
-### 🤖 AI Job Recommendations
-- Score-based matching algorithm
-- Factors: skills, location, job type, experience, salary, recency
-- Displayed on profile page and dedicated page
-
-### 👤 User Features
-- Register / Login
-- Profile with avatar upload
-- CV upload and analysis
-- Browse & search jobs (with advanced filters)
-- Apply for jobs with cover letter
-- Track application status (visual timeline)
-- Save/bookmark jobs
-- AI job recommendations
-
-### 🏢 Company Features
-- Company profile with logo
-- Post / Edit / Delete jobs
-- Manage applications (accept/reject/shortlist)
-- Application status with email notification to candidate
-- Dashboard with Charts.js graphs
-- Company reviews & ratings
-
-### 🛡️ Admin Features
-- System overview dashboard
-- Manage users (activate/deactivate/delete)
-- Manage companies (verify/delete)
-- Manage jobs (feature/delete)
-- Send bulk notifications
-- Registration & job-type charts
-
----
-
-## 📦 Dependencies
+بعض الـ Controllers موجودة في ملف واحد، يجب فصلها:
 
 ```bash
-# Core
-composer require smalot/pdfparser
-composer require phpoffice/phpword
-composer require intervention/image
+# من CommitteeDefenseController.php استخرج:
+# - CommitteeController   → app/Http/Controllers/CommitteeController.php
+# - DefenseScheduleController → app/Http/Controllers/DefenseScheduleController.php
 
-# Frontend (CDN - no build step needed)
-# - Font Awesome 6.5
-# - Google Fonts (Cairo + Inter)
-# - Chart.js 4.4
-# - jQuery 3.7
-# - Toastr.js
+# من UserReportController.php استخرج:
+# - ReportController → app/Http/Controllers/ReportController.php
+# - UserController   → app/Http/Controllers/UserController.php
+
+# من ProjectModels.php استخرج كل Model إلى ملف منفصل:
+# - ProjectReport.php
+# - ProjectFile.php
+# - DefenseSchedule.php
+# - SupervisorEvaluation.php
 ```
 
 ---
 
-## ⚙️ Middleware Registration (bootstrap/app.php)
-
-```php
-->withMiddleware(function (Middleware $middleware) {
-    $middleware->web(append: [
-        \App\Http\Middleware\SetLocale::class,
-    ]);
-    $middleware->alias([
-        'role' => \App\Http\Middleware\CheckRole::class,
-    ]);
-})
-```
-
----
-
-## 🗄️ Queue Setup
+## 🚀 الخطوة 7: تشغيل Migrations
 
 ```bash
-# Create jobs table
-php artisan queue:table
+# تشغيل جميع الـ Migrations
 php artisan migrate
 
-# Run worker
-php artisan queue:work
-
-# Or with supervisor (production)
-# See: https://laravel.com/docs/queues#supervisor-configuration
+# في حالة وجود خطأ وتريد البدء من جديد
+php artisan migrate:fresh
 ```
 
 ---
 
-**Built with ❤️ for  University Graduation Project**
+## 🌱 الخطوة 8: تشغيل Seeders
+
+```bash
+# تشغيل جميع الـ Seeders
+php artisan db:seed
+
+# أو كل seeder بشكل منفرد:
+php artisan db:seed --class=UniversitySeeder
+php artisan db:seed --class=CollegeDepartmentSeeder
+php artisan db:seed --class=UserSeeder
+php artisan db:seed --class=AcademicYearSeeder
+php artisan db:seed --class=ProjectIdeaSeeder
+php artisan db:seed --class=ProjectSeeder
+php artisan db:seed --class=CommitteeSeeder
+php artisan db:seed --class=DefenseScheduleSeeder
+
+# إعادة Migration مع Seeder في أمر واحد
+php artisan migrate:fresh --seed
+```
+
+---
+
+## 🔗 الخطوة 9: إنشاء Storage Link
+
+```bash
+php artisan storage:link
+```
+
+---
+
+## 🧹 الخطوة 10: تنظيف الكاش
+
+```bash
+php artisan config:clear
+php artisan cache:clear
+php artisan view:clear
+php artisan route:clear
+```
+
+---
+
+## ▶️ الخطوة 11: تشغيل المشروع
+
+```bash
+php artisan serve
+```
+
+افتح المتصفح على: **http://localhost:8000**
+
+---
+
+## 👤 بيانات الدخول
+
+| الدور         | البريد الإلكتروني            | كلمة المرور |
+|---------------|------------------------------|-------------|
+| مدير النظام   | admin@kau.edu.sa             | password    |
+| منسق          | coordinator@kau.edu.sa       | password    |
+| مشرف (د.أحمد) | ahmed.ghamdi@kau.edu.sa      | password    |
+| مشرف (د.فاطمة)| fatima.zahrani@kau.edu.sa    | password    |
+| مشرف (د.خالد) | khalid.otaibi@kau.edu.sa     | password    |
+| مشرف (د.منى)  | mona.shahri@kau.edu.sa       | password    |
+| عضو لجنة      | qahtani@kau.edu.sa           | password    |
+| طالب (محمد)   | s.mohammed@kau.edu.sa        | password    |
+| طالب (سلمى)   | s.salma@kau.edu.sa           | password    |
+| طالب (نورة)   | s.noura@kau.edu.sa           | password    |
+| طالب (ليلى)   | s.layla@kau.edu.sa           | password    |
+
+---
+
+## 📊 البيانات التجريبية الموجودة
+
+### المشاريع:
+| رقم المشروع   | العنوان                              | الحالة          | السنة     |
+|---------------|--------------------------------------|-----------------|-----------|
+| GRAD-2022-0001| تصنيف المشاعر في التغريدات العربية   | مؤرشف (95 A+)  | 2022-2023 |
+| GRAD-2023-0001| نظام إدارة المستشفيات الإلكتروني     | مؤرشف (91.5 A) | 2022-2023 |
+| GRAD-2024-0001| تتبع الحضور بالتعرف على الوجه        | مناقَش (88 B+)  | 2023-2024 |
+| GRAD-2025-0001| نظام إدارة مشاريع التخرج            | قيد التنفيذ 75%| 2024-2025 |
+| GRAD-2025-0002| توصية المقررات بالذكاء الاصطناعي     | معلق            | 2024-2025 |
+| SEM-2025-0001 | حجز مواعيد المرافق الجامعية          | معتمد 55%      | 2024-2025 |
+
+---
+
+## 🛠️ أوامر مفيدة إضافية
+
+```bash
+# عرض جميع الـ Routes
+php artisan route:list
+
+# إنشاء Controller جديد
+php artisan make:controller AcademicYearController --resource
+
+# إنشاء Migration جديد
+php artisan make:migration create_example_table
+
+# إنشاء Model مع Migration و Seeder
+php artisan make:model Example -ms
+
+# تشغيل Queue (لو أضفت notifications)
+php artisan queue:work
+
+# فحص حالة النظام
+php artisan about
+```
+
+---
+
+## 🌐 تغيير اللغة
+
+اللغة الافتراضية **عربية**. للتغيير إلى الإنجليزية:
+- من الواجهة: انقر زر `EN` في الـ Topbar
+- من الـ URL: `/lang/en` أو `/lang/ar`
+
+---
+
+## 🎨 تغيير السمة (Dark/Light)
+
+انقر أيقونة القمر/الشمس في الـ Topbar لتبديل السمة.
+يتم حفظ التفضيل في قاعدة البيانات لكل مستخدم.
+
+---
+
+## 📝 ملاحظات مهمة
+
+1. **الـ Controllers المجمّعة**: بعض الملفات تحتوي على أكثر من Controller، افصلها إلى ملفات منفصلة.
+2. **الـ Models المجمّعة**: ملف `ProjectModels.php` يحتوي على 4 Models، افصلها.
+3. **الصلاحيات**: استخدم الـ `Gate::define` في `AuthServiceProvider` أو أضف `Spatie/Permission` لنظام أكثر مرونة.
+4. **الإشعارات**: جاهزة للتفعيل - فعّل Queue وأضف Notification Classes.
+5. **المزيد من الـ Views**: الـ Views الأساسية موجودة، يمكن إضافة باقي الـ Views بنفس الأسلوب.

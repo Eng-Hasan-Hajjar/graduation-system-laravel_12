@@ -3,24 +3,26 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Pagination\Paginator;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
-    public function register(): void
-    {
-              // تسجيل محرك الاستدلال كـ singleton
-        $this->app->singleton(InferenceEngine::class);
-    }
+    public function register(): void {}
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-         Paginator::useBootstrapFive();
+        // Bootstrap pagination
+        Paginator::useBootstrapFive();
+
+        // @active('route.name') directive for sidebar
+        Blade::directive('active', function ($route) {
+            return "<?php echo request()->routeIs({$route}) ? 'active' : ''; ?>";
+        });
+
+        // Set default locale from config
+        if (!session()->has('locale')) {
+            app()->setLocale(config('app.locale', 'ar'));
+        }
     }
 }

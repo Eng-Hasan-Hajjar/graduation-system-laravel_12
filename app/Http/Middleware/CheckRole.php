@@ -1,22 +1,25 @@
 <?php
 
-// ==========================================
-// app/Http/Middleware/CheckRole.php
-// ==========================================
 namespace App\Http\Middleware;
- 
-use Illuminate\Http\Request;
+
 use Closure;
- 
+use Illuminate\Http\Request;
+
 class CheckRole
 {
-    public function handle(Request $request, Closure $next, string ...$roles): mixed
+    /**
+     * Usage in routes: middleware('role:admin,coordinator')
+     */
+    public function handle(Request $request, Closure $next, string ...$roles)
     {
-        if (!auth()->check() || !in_array(auth()->user()->role, $roles)) {
-            abort(403, 'Unauthorized');
+        if (!auth()->check()) {
+            return redirect()->route('login');
         }
+
+        if (!in_array(auth()->user()->role, $roles)) {
+            abort(403, __('messages.unauthorized'));
+        }
+
         return $next($request);
     }
 }
- 
-

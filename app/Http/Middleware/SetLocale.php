@@ -1,26 +1,25 @@
 <?php
 
-// ==========================================
-// app/Http/Middleware/SetLocale.php
-// ==========================================
 namespace App\Http\Middleware;
- 
-use Illuminate\Http\Request;
+
 use Closure;
- 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
+
 class SetLocale
 {
     public function handle(Request $request, Closure $next)
     {
-        $locale = session('locale')
-            ?? auth()->user()?->locale
-            ?? $request->cookie('locale')
-            ?? config('app.locale', 'en');
- 
-        if (in_array($locale, ['ar', 'en'])) {
-            app()->setLocale($locale);
+        // Priority: session → user preference → config default
+        if (session()->has('locale')) {
+            App::setLocale(session('locale'));
+        } elseif (auth()->check() && auth()->user()->lang_preference) {
+            App::setLocale(auth()->user()->lang_preference);
+            session(['locale' => auth()->user()->lang_preference]);
+        } else {
+            App::setLocale(config('app.locale', 'ar'));
         }
- 
+
         return $next($request);
     }
 }

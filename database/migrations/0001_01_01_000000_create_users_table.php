@@ -9,28 +9,30 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-           $table->id();
-            $table->string('name');
+            $table->id();
+            $table->foreignId('university_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('college_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('department_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('name_ar');
+            $table->string('name_en')->nullable();
             $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
-            $table->enum('role', ['user', 'company', 'admin'])->default('user');
+            $table->string('phone')->nullable();
+            $table->string('national_id')->nullable()->unique();
+            $table->string('student_id')->nullable()->unique(); // رقم الطالب
+            $table->string('employee_id')->nullable()->unique(); // رقم الموظف/الدكتور
+            $table->enum('role', ['admin', 'supervisor', 'coordinator', 'committee_member', 'student'])
+                  ->default('student');
+            $table->string('academic_rank')->nullable(); // أستاذ، أستاذ مشارك، أستاذ مساعد...
+            $table->string('specialization_ar')->nullable();
+            $table->string('specialization_en')->nullable();
+            $table->integer('academic_year')->nullable(); // السنة الدراسية للطالب
             $table->string('avatar')->nullable();
-            $table->string('phone', 30)->nullable();
-            $table->text('bio')->nullable();
-            $table->string('location')->nullable();
-            $table->string('cv_path')->nullable();
-            $table->json('cv_analyzed')->nullable();
-            $table->json('skills')->nullable();
-            $table->enum('experience_level', ['entry','junior','mid','senior','lead'])->nullable();
-            $table->json('preferred_job_types')->nullable();
-            $table->json('preferred_locations')->nullable();
-            $table->decimal('expected_salary', 10, 2)->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->string('locale', 5)->default('en');
-            $table->timestamp('last_seen_at')->nullable();
+            $table->string('password');
+            $table->enum('status', ['active', 'inactive', 'suspended'])->default('active');
+            $table->string('lang_preference')->default('ar'); // ar / en
+            $table->string('theme_preference')->default('light'); // light / dark
+            $table->timestamp('last_login_at')->nullable();
             $table->rememberToken();
-            $table->softDeletes();
             $table->timestamps();
         });
 

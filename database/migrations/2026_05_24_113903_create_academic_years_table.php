@@ -11,12 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('colleges', function (Blueprint $table) {
+        Schema::create('academic_years', function (Blueprint $table) {
             $table->id();
-             $table->foreignId('university_id')->constrained()->cascadeOnDelete();
-            $table->string('name_ar');
+            $table->foreignId('university_id')->constrained()->cascadeOnDelete();
+            $table->string('name_ar'); // مثال: 2024-2025
             $table->string('name_en');
-            $table->string('code')->nullable();
+            $table->year('year_start');
+            $table->year('year_end');
+            $table->date('start_date');
+            $table->date('end_date');
+            $table->boolean('is_current')->default(false);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
@@ -27,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('colleges');
+        Schema::dropIfExists('academic_years');
     }
 };
