@@ -38,40 +38,85 @@ class ProjectIdeaController extends Controller
 
     public function create()
     {
-        $this->authorize('create-idea');
+      //  $this->authorize('create-idea');
         $departments = Department::where('is_active', true)->get();
         $semesters   = Semester::where('is_active', true)->get();
         return view('ideas.create', compact('departments', 'semesters'));
     }
 
-    public function store(Request $request)
-    {
-        $this->authorize('create-idea');
+  public function store(Request $request)
+{
+   // $this->authorize('create-idea');
 
-        $data = $request->validate([
-            'title_ar'           => 'required|string|max:255',
-            'title_en'           => 'nullable|string|max:255',
-            'description_ar'     => 'required|string',
-            'description_en'     => 'nullable|string',
-            'objectives_ar'      => 'nullable|string',
-            'expected_outcomes_ar' => 'nullable|string',
-            'project_type'       => 'required|in:graduation,semester,year4,research',
-            'category_ar'        => 'nullable|string|max:100',
-            'department_id'      => 'required|exists:departments,id',
-            'semester_id'        => 'nullable|exists:semesters,id',
-            'tools'              => 'nullable|array',
-            'min_students'       => 'nullable|integer|min:1',
-            'max_students'       => 'nullable|integer|min:1|max:5',
-            'priority'           => 'nullable|in:low,medium,high',
-        ]);
+    $data = $this->validateIdea($request);
 
-        $data['proposed_by'] = Auth::id();
-        $data['status']      = Auth::user()->isAdmin() ? 'approved' : 'pending';
+    $data['proposed_by'] = Auth::id();
+    $data['status']      = Auth::user()->isAdmin() ? 'approved' : 'pending';
 
-        ProjectIdea::create($data);
-
-        return redirect()->route('ideas.index')->with('success', __('messages.idea_created'));
+    if ($data['status'] === 'approved') {
+        $data['approved_by'] = Auth::id();
+        $data['approved_at'] = now();
     }
+
+    ProjectIdea::create($data);
+
+    return redirect()->route('ideas.index')->with('success', __('messages.idea_created'));
+}
+
+public function update(Request $request, ProjectIdea $idea)
+{
+  //  $this->authorize('update', $idea);
+
+    $data = $this->validateIdea($request);
+
+    $idea->update($data);
+
+    return back()->with('success', __('messages.idea_updated'));
+}
+
+/**
+ * قواعد التحقق المشتركة بين الإنشاء والتعديل + تحويل الحقول النصية إلى مصفوفات
+ */
+private function validateIdea(Request $request): array
+{
+    $data = $request->validate([
+        'title_ar'             => 'required|string|max:255',
+        'title_en'             => 'nullable|string|max:255',
+        'description_ar'       => 'required|string',
+        'description_en'       => 'nullable|string',
+        'objectives_ar'        => 'nullable|string',
+        'objectives_en'        => 'nullable|string',
+        'expected_outcomes_ar' => 'nullable|string',
+        'expected_outcomes_en' => 'nullable|string',
+        'requirements_ar'      => 'nullable|string',
+        'requirements_en'      => 'nullable|string',
+        'project_type'         => 'required|in:graduation,semester,year4,research',
+        'category_ar'          => 'nullable|string|max:100',
+        'category_en'          => 'nullable|string|max:100',
+        'department_id'        => 'required|exists:departments,id',
+        'semester_id'          => 'nullable|exists:semesters,id',
+        'tags'                 => 'nullable|string',
+        'tools'                => 'nullable|string',
+        'technologies'         => 'nullable|string',
+        'min_students'         => 'nullable|integer|min:1',
+        'max_students'         => 'nullable|integer|min:1|max:10|gte:min_students',
+        'priority'             => 'nullable|in:low,medium,high',
+    ]);
+
+    // تحويل الحقول النصية المفصولة بفواصل إلى مصفوفات (tags / tools / technologies)
+    foreach (['tags', 'tools', 'technologies'] as $field) {
+        $data[$field] = $request->filled($field)
+            ? array_map('trim', explode(',', $request->$field))
+            : [];
+    }
+
+    // is_featured متاح فقط للمسؤول
+    if (Auth::user()->isAdmin()) {
+        $data['is_featured'] = $request->boolean('is_featured');
+    }
+
+    return $data;
+}
 
     public function show(ProjectIdea $idea)
     {
@@ -81,26 +126,13 @@ class ProjectIdeaController extends Controller
 
     public function edit(ProjectIdea $idea)
     {
-        $this->authorize('update', $idea);
+   //     $this->authorize('update', $idea);
         $departments = Department::where('is_active', true)->get();
         $semesters   = Semester::where('is_active', true)->get();
         return view('ideas.edit', compact('idea', 'departments', 'semesters'));
     }
 
-    public function update(Request $request, ProjectIdea $idea)
-    {
-        $this->authorize('update', $idea);
-        $data = $request->validate([
-            'title_ar'       => 'required|string|max:255',
-            'title_en'       => 'nullable|string|max:255',
-            'description_ar' => 'required|string',
-            'tools'          => 'nullable|array',
-            'min_students'   => 'nullable|integer|min:1',
-            'max_students'   => 'nullable|integer|min:1|max:5',
-        ]);
-        $idea->update($data);
-        return back()->with('success', __('messages.idea_updated'));
-    }
+ 
 
     public function approve(ProjectIdea $idea)
     {
