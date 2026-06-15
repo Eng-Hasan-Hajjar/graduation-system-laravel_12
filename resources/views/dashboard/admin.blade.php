@@ -1,213 +1,311 @@
 @extends('layouts.app')
 
-@section('title', __('nav.dashboard'))
-
-@section('breadcrumb')
-    <span class="text-muted small">{{ __('nav.dashboard') }}</span>
-@endsection
+@section('title', app()->getLocale() === 'ar' ? 'لوحة تحكم المسؤول' : 'Admin Dashboard')
 
 @section('content')
-{{-- ── Page Header ── --}}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h4 class="mb-1 fw-bold">{{ __('dashboard.welcome') }}, {{ auth()->user()->name }} 👋</h4>
-        <p class="text-muted mb-0 small">
-            {{ __('dashboard.today') }}: {{ now()->translatedFormat('l, d F Y') }}
-            @if($currentSemester)
-                &bull; {{ __('dashboard.current_semester') }}: <strong>{{ $currentSemester->name }}</strong>
-            @endif
-        </p>
-    </div>
-    <div class="d-flex gap-2">
-        <a href="{{ route('projects.create') }}" class="btn btn-primary btn-sm">
-            <i class="bi bi-plus-lg me-1"></i>{{ __('projects.new_project') }}
-        </a>
-        <a href="{{ route('ideas.create') }}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-lightbulb me-1"></i>{{ __('ideas.new_idea') }}
-        </a>
-    </div>
-</div>
+@php
+    $locale = app()->getLocale();
+    $isAr   = $locale === 'ar';
 
-{{-- ── Stats Cards ── --}}
-<div class="row g-3 mb-4">
-    @php
-    $cards = [
-        ['label' => __('stats.total_projects'),   'value' => $stats['total_projects'],    'icon' => 'folder2-open',   'color' => 'primary'],
-        ['label' => __('stats.active_projects'),  'value' => $stats['active_projects'],   'icon' => 'play-circle',    'color' => 'success'],
-        ['label' => __('stats.pending'),          'value' => $stats['pending_projects'],  'icon' => 'clock-history',  'color' => 'warning'],
-        ['label' => __('stats.defended'),         'value' => $stats['defended_projects'], 'icon' => 'trophy',         'color' => 'info'],
-        ['label' => __('stats.archived'),         'value' => $stats['archived_projects'], 'icon' => 'archive',        'color' => 'secondary'],
-        ['label' => __('stats.students'),         'value' => $stats['total_students'],    'icon' => 'mortarboard',    'color' => 'primary'],
-        ['label' => __('stats.supervisors'),      'value' => $stats['total_supervisors'], 'icon' => 'person-badge',   'color' => 'secondary'],
-        ['label' => __('stats.pending_ideas'),    'value' => $stats['pending_ideas'],     'icon' => 'lightbulb',      'color' => 'warning'],
+    $localized = function ($model, $field) use ($locale) {
+        if (!$model) return '';
+        return $model->{$field . '_' . $locale}
+            ?? $model->{$field . '_ar'}
+            ?? $model->{$field}
+            ?? '';
+    };
+
+    $fmtDate = function ($value) {
+        return $value ? \Carbon\Carbon::parse($value)->format('Y-m-d') : '-';
+    };
+    $fmtTime = function ($value) {
+        return $value ? \Carbon\Carbon::parse($value)->format('H:i') : '';
+    };
+
+    $statusLabels = [
+        'pending'     => $isAr ? 'قيد الانتظار' : 'Pending',
+        'approved'    => $isAr ? 'معتمد' : 'Approved',
+        'rejected'    => $isAr ? 'مرفوض' : 'Rejected',
+        'in_progress' => $isAr ? 'قيد التنفيذ' : 'In Progress',
+        'submitted'   => $isAr ? 'مُسلَّم' : 'Submitted',
+        'defended'    => $isAr ? 'تمت المناقشة' : 'Defended',
+        'archived'    => $isAr ? 'مؤرشف' : 'Archived',
     ];
-    @endphp
 
-    @foreach($cards as $card)
-    <div class="col-6 col-md-3">
-        <div class="card stat-card shadow-sm h-100">
-            <div class="card-body d-flex align-items-center gap-3">
-                <div class="icon-box bg-{{ $card['color'] }} bg-opacity-10 text-{{ $card['color'] }}">
-                    <i class="bi bi-{{ $card['icon'] }}"></i>
-                </div>
-                <div>
-                    <div class="fw-bold fs-4">{{ $card['value'] }}</div>
-                    <div class="text-muted small">{{ $card['label'] }}</div>
-                </div>
-            </div>
+    $statusColors = [
+        'pending'     => 'warning',
+        'approved'    => 'success',
+        'rejected'    => 'danger',
+        'in_progress' => 'info',
+        'submitted'   => 'primary',
+        'defended'    => 'secondary',
+        'archived'    => 'dark',
+    ];
+@endphp
+
+<div class="container py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h3 class="mb-1">
+                <i class="bi bi-speedometer2 text-primary"></i>
+                {{ $isAr ? 'لوحة تحكم المسؤول' : 'Admin Dashboard' }}
+            </h3>
+            @if ($currentSemester)
+                <span class="text-muted">
+                    {{ $isAr ? 'الفصل الدراسي الحالي' : 'Current Semester' }}: <strong>{{ $localized($currentSemester, 'name') }}</strong>
+                </span>
+            @endif
         </div>
     </div>
-    @endforeach
-</div>
 
-<div class="row g-4">
-
-    {{-- ── Today's Defenses ── --}}
-    @if($upcomingDefenses->count())
-    <div class="col-12 col-lg-6">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-transparent border-0 pt-3 pb-0 d-flex justify-content-between">
-                <h6 class="fw-bold mb-0"><i class="bi bi-calendar-event text-primary me-2"></i>{{ __('dashboard.upcoming_defenses') }}</h6>
-                <a href="{{ route('schedules.index') }}" class="small text-primary">{{ __('common.view_all') }}</a>
-            </div>
-            <div class="card-body p-0">
-                <div class="list-group list-group-flush">
-                    @foreach($upcomingDefenses as $defense)
-                    <a href="{{ route('schedules.show', $defense) }}" class="list-group-item list-group-item-action px-4 py-3">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <div class="fw-semibold small">{{ $defense->project->title }}</div>
-                                <div class="text-muted" style="font-size:.8rem">
-                                    <i class="bi bi-calendar3 me-1"></i>{{ $defense->scheduled_date->format('d/m/Y') }}
-                                    <i class="bi bi-clock ms-2 me-1"></i>{{ $defense->scheduled_time }}
-                                    @if($defense->room)
-                                        <i class="bi bi-geo-alt ms-2 me-1"></i>{{ $defense->room }}
-                                    @endif
-                                </div>
-                            </div>
-                            <span class="badge bg-{{ $defense->status_color }} badge-status">{{ $defense->status_label }}</span>
-                        </div>
-                    </a>
-                    @endforeach
-                </div>
-            </div>
-        </div>
-    </div>
+    @if (session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
-    {{-- ── Pending Approvals ── --}}
-    @if($pendingApprovals->count())
-    <div class="col-12 col-lg-6">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-transparent border-0 pt-3 pb-0 d-flex justify-content-between">
-                <h6 class="fw-bold mb-0">
-                    <i class="bi bi-clock-history text-warning me-2"></i>{{ __('dashboard.pending_approvals') }}
-                    <span class="badge bg-warning text-dark ms-1">{{ $pendingApprovals->count() }}</span>
-                </h6>
-                <a href="{{ route('projects.index', ['status'=>'pending']) }}" class="small text-primary">{{ __('common.view_all') }}</a>
+    {{-- بطاقات الإحصائيات --}}
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-folder2-open fs-2 text-primary"></i>
+                    <h3 class="mt-2 mb-0">{{ $stats['total_projects'] }}</h3>
+                    <small class="text-muted">{{ $isAr ? 'إجمالي المشاريع' : 'Total Projects' }}</small>
+                </div>
             </div>
-            <div class="card-body p-0">
-                <div class="list-group list-group-flush">
-                    @foreach($pendingApprovals as $proj)
-                    <a href="{{ route('projects.show', $proj) }}" class="list-group-item list-group-item-action px-4 py-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="fw-semibold small">{{ $proj->title }}</div>
-                                <div class="text-muted" style="font-size:.8rem">
-                                    {{ $proj->department->name }} &bull;
-                                    {{ $proj->project_type_label }} &bull;
-                                    {{ $proj->created_at->diffForHumans() }}
-                                </div>
-                            </div>
-                            <div class="d-flex gap-1">
-                                <form action="{{ route('projects.approve', $proj) }}" method="POST">
-                                    @csrf @method('PATCH')
-                                    <button class="btn btn-xs btn-success" style="font-size:.75rem;padding:.2rem .5rem" title="{{ __('common.approve') }}">
-                                        <i class="bi bi-check-lg"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </a>
-                    @endforeach
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-hourglass-split fs-2 text-warning"></i>
+                    <h3 class="mt-2 mb-0">{{ $stats['pending_projects'] }}</h3>
+                    <small class="text-muted">{{ $isAr ? 'بانتظار الاعتماد' : 'Pending Approval' }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-play-circle fs-2 text-info"></i>
+                    <h3 class="mt-2 mb-0">{{ $stats['active_projects'] }}</h3>
+                    <small class="text-muted">{{ $isAr ? 'مشاريع نشطة' : 'Active Projects' }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-mortarboard fs-2 text-success"></i>
+                    <h3 class="mt-2 mb-0">{{ $stats['defended_projects'] }}</h3>
+                    <small class="text-muted">{{ $isAr ? 'تمت مناقشتها' : 'Defended' }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-archive fs-2 text-secondary"></i>
+                    <h3 class="mt-2 mb-0">{{ $stats['archived_projects'] }}</h3>
+                    <small class="text-muted">{{ $isAr ? 'مؤرشفة' : 'Archived' }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-people fs-2 text-primary"></i>
+                    <h3 class="mt-2 mb-0">{{ $stats['total_students'] }}</h3>
+                    <small class="text-muted">{{ $isAr ? 'عدد الطلاب' : 'Students' }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-person-badge fs-2 text-info"></i>
+                    <h3 class="mt-2 mb-0">{{ $stats['total_supervisors'] }}</h3>
+                    <small class="text-muted">{{ $isAr ? 'عدد المشرفين' : 'Supervisors' }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-lightbulb fs-2 text-warning"></i>
+                    <h3 class="mt-2 mb-0">{{ $stats['pending_ideas'] }}</h3>
+                    <small class="text-muted">{{ $isAr ? 'أفكار قيد المراجعة' : 'Pending Ideas' }}</small>
                 </div>
             </div>
         </div>
     </div>
-    @endif
 
-    {{-- ── Recent Projects ── --}}
-    <div class="col-12">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-transparent border-0 pt-3 pb-0 d-flex justify-content-between">
-                <h6 class="fw-bold mb-0"><i class="bi bi-folder2-open text-primary me-2"></i>{{ __('dashboard.recent_projects') }}</h6>
-                <a href="{{ route('projects.index') }}" class="small text-primary">{{ __('common.view_all') }}</a>
-            </div>
-            <div class="card-body p-0">
+    <div class="row g-4">
+        {{-- أحدث المشاريع --}}
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-clock-history"></i> {{ $isAr ? 'أحدث المشاريع' : 'Recent Projects' }}</span>
+                    <a href="{{ route('projects.index') }}" class="btn btn-sm btn-outline-primary">
+                        {{ $isAr ? 'عرض الكل' : 'View All' }}
+                    </a>
+                </div>
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
                             <tr>
-                                <th>{{ __('projects.number') }}</th>
-                                <th>{{ __('projects.title') }}</th>
-                                <th>{{ __('projects.type') }}</th>
-                                <th>{{ __('projects.supervisor') }}</th>
-                                <th>{{ __('projects.students') }}</th>
-                                <th>{{ __('projects.progress') }}</th>
-                                <th>{{ __('projects.status') }}</th>
+                                <th>{{ $isAr ? 'العنوان' : 'Title' }}</th>
+                                <th>{{ $isAr ? 'المشرف' : 'Supervisor' }}</th>
+                                <th>{{ $isAr ? 'الطلاب' : 'Students' }}</th>
+                                <th>{{ $isAr ? 'الفصل' : 'Semester' }}</th>
+                                <th>{{ $isAr ? 'الحالة' : 'Status' }}</th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($recentProjects as $proj)
-                            <tr>
-                                <td><code class="small">{{ $proj->project_number }}</code></td>
-                                <td>
-                                    <div class="fw-semibold small">{{ Str::limit($proj->title, 40) }}</div>
-                                    @if($proj->is_discussed)
-                                        <span class="badge bg-success-subtle text-success" style="font-size:.7rem">
-                                            <i class="bi bi-check2-circle me-1"></i>{{ __('projects.discussed') }}
+                            @forelse ($recentProjects as $project)
+                                <tr>
+                                    <td>{{ $localized($project, 'title') }}</td>
+                                    <td>{{ $project->supervisor?->name ?? '-' }}</td>
+                                    <td>{{ $project->students->count() }}</td>
+                                    <td>{{ $localized($project->semester, 'name') }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ $statusColors[$project->status] ?? 'secondary' }}">
+                                            {{ $statusLabels[$project->status] ?? $project->status }}
                                         </span>
-                                    @endif
-                                </td>
-                                <td><span class="badge bg-secondary-subtle text-secondary">{{ $proj->project_type_label }}</span></td>
-                                <td class="small">{{ $proj->supervisor?->name ?? '-' }}</td>
-                                <td>
-                                    @foreach($proj->students->take(3) as $s)
-                                        <img src="{{ $s->avatar_url }}" width="24" height="24"
-                                             class="rounded-circle border border-white" style="margin-right:-6px"
-                                             title="{{ $s->name }}" alt="">
-                                    @endforeach
-                                    @if($proj->students->count() > 3)
-                                        <span class="badge bg-secondary" style="font-size:.7rem">+{{ $proj->students->count()-3 }}</span>
-                                    @endif
-                                </td>
-                                <td style="min-width:100px">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="progress flex-grow-1">
-                                            <div class="progress-bar bg-primary" style="width:{{ $proj->progress_percentage }}%"></div>
-                                        </div>
-                                        <small class="text-muted">{{ $proj->progress_percentage }}%</small>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="badge bg-{{ $proj->status_color }}-subtle text-{{ $proj->status_color }} badge-status">
-                                        {{ $proj->status_label }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <a href="{{ route('projects.show', $proj) }}" class="btn btn-sm btn-outline-primary" style="font-size:.75rem;padding:.2rem .6rem">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                            @endforeach
+                                    </td>
+                                    <td>
+                                        <a href="{{ route('projects.show', $project) }}" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="6" class="text-center text-muted py-4">{{ $isAr ? 'لا توجد مشاريع' : 'No projects' }}</td></tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
             </div>
+
+            {{-- مشاريع تحتاج اعتماد --}}
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="bi bi-check2-square"></i> {{ $isAr ? 'مشاريع بانتظار الاعتماد' : 'Projects Pending Approval' }}
+                </div>
+                @if ($pendingApprovals->isEmpty())
+                    <div class="card-body text-center text-muted py-4">
+                        {{ $isAr ? 'لا توجد مشاريع بانتظار الاعتماد' : 'No projects pending approval' }}
+                    </div>
+                @else
+                    <ul class="list-group list-group-flush">
+                        @foreach ($pendingApprovals as $project)
+                            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <strong>{{ $localized($project, 'title') }}</strong>
+                                    <div class="small text-muted">
+                                        {{ $localized($project->department, 'name') }}
+                                        @if ($project->creator)
+                                            &nbsp;|&nbsp; {{ $isAr ? 'مقدّم من' : 'By' }}: {{ $project->creator->name }}
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <form action="{{ route('projects.approve', $project) }}" method="POST">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            <i class="bi bi-check-circle"></i> {{ $isAr ? 'اعتماد' : 'Approve' }}
+                                        </button>
+                                    </form>
+                                    <a href="{{ route('projects.show', $project) }}" class="btn btn-sm btn-outline-secondary">
+                                        {{ $isAr ? 'مراجعة' : 'Review' }}
+                                    </a>
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
+        </div>
+
+        {{-- الشريط الجانبي --}}
+        <div class="col-lg-4">
+            {{-- أقرب جلسات المناقشة --}}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <i class="bi bi-calendar-event"></i> {{ $isAr ? 'أقرب جلسات المناقشة' : 'Upcoming Defenses' }}
+                </div>
+                @if ($upcomingDefenses->isEmpty())
+                    <div class="card-body text-center text-muted py-4">
+                        {{ $isAr ? 'لا توجد جلسات قادمة' : 'No upcoming defenses' }}
+                    </div>
+                @else
+                    <ul class="list-group list-group-flush">
+                        @foreach ($upcomingDefenses as $defense)
+                            <li class="list-group-item">
+                                <div class="fw-bold">{{ $localized($defense->project, 'title') }}</div>
+                                <div class="small text-muted">
+                                    <i class="bi bi-calendar3"></i> {{ $fmtDate($defense->scheduled_date) }}
+                                    @if ($defense->scheduled_time)
+                                        - <i class="bi bi-clock"></i> {{ $fmtTime($defense->scheduled_time) }}
+                                    @endif
+                                </div>
+                                @if ($defense->project?->supervisor)
+                                    <div class="small text-muted">
+                                        <i class="bi bi-person"></i> {{ $defense->project->supervisor->name }}
+                                    </div>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
+
+            {{-- توزيع المشاريع حسب النوع --}}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <i class="bi bi-pie-chart"></i> {{ $isAr ? 'توزيع المشاريع حسب النوع' : 'Projects by Type' }}
+                </div>
+                <div class="card-body">
+                    @forelse ($projectsByType as $type => $count)
+                        @php $percent = $stats['total_projects'] > 0 ? round(($count / $stats['total_projects']) * 100) : 0; @endphp
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span>{{ $type }}</span>
+                                <span>{{ $count }}</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-primary" style="width: {{ $percent }}%"></div>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-muted mb-0">{{ $isAr ? 'لا توجد بيانات' : 'No data' }}</p>
+                    @endforelse
+                </div>
+            </div>
+
+            {{-- توزيع المشاريع حسب الحالة --}}
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="bi bi-bar-chart"></i> {{ $isAr ? 'توزيع المشاريع حسب الحالة' : 'Projects by Status' }}
+                </div>
+                <div class="card-body">
+                    @forelse ($projectsByStatus as $status => $count)
+                        @php $percent = $stats['total_projects'] > 0 ? round(($count / $stats['total_projects']) * 100) : 0; @endphp
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span>{{ $statusLabels[$status] ?? $status }}</span>
+                                <span>{{ $count }}</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-{{ $statusColors[$status] ?? 'secondary' }}" style="width: {{ $percent }}%"></div>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-muted mb-0">{{ $isAr ? 'لا توجد بيانات' : 'No data' }}</p>
+                    @endforelse
+                </div>
+            </div>
         </div>
     </div>
-
 </div>
 @endsection
