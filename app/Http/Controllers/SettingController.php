@@ -1,21 +1,37 @@
 <?php
 
-
 namespace App\Http\Controllers;
 
-// ─── SettingController ────────────────────────────────────────────────────────
+use App\Models\Setting;
+use Illuminate\Http\Request;
+
 class SettingController extends Controller
 {
     public function index()
     {
-        $settings = \App\Models\Setting::orderBy('group')->orderBy('key')->get()
-                                       ->groupBy('group');
+        $settings = Setting::orderBy('group')
+                           ->orderBy('key')
+                           ->get()
+                           ->groupBy('group');
+
         return view('settings.index', compact('settings'));
     }
- 
-    public function update(\Illuminate\Http\Request $request, \App\Models\Setting $setting)
+
+    public function update(Request $request, Setting $setting)
     {
-        $setting->update(['value' => $request->value]);
-        return back()->with('success', 'تم حفظ الإعداد');
+        $request->validate([
+            'value' => 'nullable',
+        ]);
+
+        // boolean checkbox: إن لم يُرسل = false
+        $value = $setting->type === 'boolean'
+            ? ($request->has('value') ? '1' : '0')
+            : $request->value;
+
+        $setting->update(['value' => $value]);
+
+        return back()->with('success', app()->getLocale() === 'ar'
+            ? 'تم حفظ الإعداد بنجاح'
+            : 'Setting saved successfully');
     }
 }

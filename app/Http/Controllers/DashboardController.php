@@ -29,7 +29,6 @@ class DashboardController extends Controller
         };
     }
 
-    // ─── Admin / Coordinator Dashboard ───────────────────────────────────────
     private function adminDashboard()
     {
         $stats = [
@@ -43,21 +42,23 @@ class DashboardController extends Controller
             'pending_ideas'     => ProjectIdea::where('status', 'pending')->count(),
         ];
 
-        $recentProjects    = Project::with(['supervisor','students','semester'])
-                                    ->latest()->take(8)->get();
+        $recentProjects   = Project::with(['supervisor','students','semester'])
+                                   ->latest()->take(8)->get();
 
-        $upcomingDefenses  = DefenseSchedule::with(['project.students','project.supervisor'])
-                                            ->upcoming()->take(5)->get();
+        $upcomingDefenses = DefenseSchedule::with(['project.students','project.supervisor'])
+                                           ->upcoming()->take(5)->get();
 
-        $pendingApprovals  = Project::where('status', 'pending')
-                                    ->with(['department','creator'])
-                                    ->latest()->take(5)->get();
+        $pendingApprovals = Project::where('status', 'pending')
+                                   ->with(['department','creator'])
+                                   ->latest()->take(5)->get();
 
         $projectsByType = Project::selectRaw('project_type, count(*) as count')
-                                 ->groupBy('project_type')->pluck('count','project_type');
+                                 ->groupBy('project_type')
+                                 ->pluck('count','project_type');
 
         $projectsByStatus = Project::selectRaw('status, count(*) as count')
-                                   ->groupBy('status')->pluck('count','status');
+                                   ->groupBy('status')
+                                   ->pluck('count','status');
 
         $currentSemester = Semester::current();
 
@@ -67,7 +68,6 @@ class DashboardController extends Controller
         ));
     }
 
-    // ─── Supervisor Dashboard ─────────────────────────────────────────────────
     private function supervisorDashboard(User $user)
     {
         $myProjects = Project::where('supervisor_id', $user->id)
@@ -75,15 +75,17 @@ class DashboardController extends Controller
                              ->get();
 
         $stats = [
-            'total'     => $myProjects->count(),
-            'active'    => $myProjects->whereIn('status', ['approved','in_progress'])->count(),
-            'pending'   => $myProjects->where('status', 'pending')->count(),
-            'defended'  => $myProjects->where('is_discussed', true)->count(),
+            'total'    => $myProjects->count(),
+            'active'   => $myProjects->whereIn('status', ['approved','in_progress'])->count(),
+            'pending'  => $myProjects->where('status', 'pending')->count(),
+            'defended' => $myProjects->where('is_discussed', true)->count(),
         ];
 
         $pendingReports = \App\Models\ProjectReport::whereHas('project', fn($q) =>
             $q->where('supervisor_id', $user->id)
-        )->where('status', 'submitted')->with('project','submittedBy')->get();
+        )->where('status', 'submitted')
+         ->with('project','submittedBy')
+         ->get();
 
         $upcomingDefenses = DefenseSchedule::whereHas('project', fn($q) =>
             $q->where('supervisor_id', $user->id)
@@ -96,7 +98,6 @@ class DashboardController extends Controller
         ));
     }
 
-    // ─── Committee Member Dashboard ───────────────────────────────────────────
     private function committeeDashboard(User $user)
     {
         $myCommittees = \App\Models\Committee::whereHas('members', fn($q) =>
@@ -110,13 +111,13 @@ class DashboardController extends Controller
         return view('dashboard.committee', compact('myCommittees', 'upcomingDefenses'));
     }
 
-    // ─── Student Dashboard ────────────────────────────────────────────────────
     private function studentDashboard(User $user)
     {
         $myProjects = $user->studentProjects()
                            ->with(['supervisor','semester','milestones','defenseSchedules'])
                            ->get();
 
+        // الكولكشن يستخدم اسم العمود البسيط (status) وليس projects.status
         $currentProject = $myProjects->whereIn('status', ['approved','in_progress'])->first();
 
         $availableIdeas = ProjectIdea::where('status', 'approved')

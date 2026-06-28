@@ -1,3 +1,4 @@
+
 @extends('layouts.app')
 @section('title', __('nav.all_projects'))
 

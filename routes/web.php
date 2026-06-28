@@ -70,6 +70,8 @@ Route::middleware(['auth', 'set.locale'])->group(function () {
         Route::get('/create',                 [CommitteeController::class, 'create'])->name('create');
         Route::post('/',                      [CommitteeController::class, 'store'])->name('store');
         Route::get('/{committee}',            [CommitteeController::class, 'show'])->name('show');
+            Route::get('/{committee}/edit',       [CommitteeController::class, 'edit'])->name('edit');   // ← جديد
+    Route::put('/{committee}',            [CommitteeController::class, 'update'])->name('update');
         Route::patch('/{committee}/complete', [CommitteeController::class, 'markCompleted'])->name('complete');
         Route::delete('/{committee}',         [CommitteeController::class, 'destroy'])->name('destroy');
     });

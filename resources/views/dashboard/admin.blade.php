@@ -212,6 +212,7 @@
                                 <div class="d-flex gap-2">
                                     <form action="{{ route('projects.approve', $project) }}" method="POST">
                                         @csrf
+                                        @method('PATCH')
                                         <button type="submit" class="btn btn-sm btn-success">
                                             <i class="bi bi-check-circle"></i> {{ $isAr ? 'اعتماد' : 'Approve' }}
                                         </button>

@@ -289,6 +289,7 @@
                         <div class="card-body">
                             <form action="{{ route('ideas.approve', $idea) }}" method="POST" class="mb-3">
                                 @csrf
+                                @method('PATCH')
                                 <button type="submit" class="btn btn-success w-100">
                                     <i class="bi bi-check-circle"></i> {{ $isAr ? 'اعتماد الفكرة' : 'Approve Idea' }}
                                 </button>
@@ -296,6 +297,7 @@
 
                             <form action="{{ route('ideas.reject', $idea) }}" method="POST">
                                 @csrf
+                                @method('PATCH')
                                 <label class="form-label">{{ $isAr ? 'سبب الرفض' : 'Rejection Reason' }}</label>
                                 <textarea name="rejection_reason" rows="3"
                                           class="form-control mb-2 @error('rejection_reason') is-invalid @enderror" required>{{ old('rejection_reason') }}</textarea>

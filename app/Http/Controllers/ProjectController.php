@@ -20,46 +20,47 @@ class ProjectController extends Controller
     }
 
     // قائمة المشاريع
-    public function index(Request $request)
-    {
-        $query = Project::with(['supervisor', 'students', 'department', 'semester'])
-            ->when($request->status, fn($q) => $q->where('status', $request->status))
-            ->when($request->type, fn($q) => $q->byType($request->type))
-            ->when($request->semester_id, fn($q) => $q->where('semester_id', $request->semester_id))
-            ->when($request->department_id, fn($q) => $q->where('department_id', $request->department_id))
-            ->when(
-                $request->search,
-                fn($q) =>
-                $q->where(
-                    fn($q2) =>
-                    $q2->where('title_ar', 'like', "%{$request->search}%")
-                        ->orWhere('title_en', 'like', "%{$request->search}%")
-                        ->orWhere('project_number', 'like', "%{$request->search}%")
-                )
+public function index(Request $request)
+{
+    $query = Project::with(['supervisor', 'students', 'department', 'semester'])
+        ->when(
+            $request->status && $request->status !== 'my',
+            fn($q) => $q->where('status', $request->status)
+        )
+        ->when($request->type, fn($q) => $q->byType($request->type))
+        ->when($request->semester_id, fn($q) => $q->where('semester_id', $request->semester_id))
+        ->when($request->department_id, fn($q) => $q->where('department_id', $request->department_id))
+        ->when($request->search, fn($q) =>
+            $q->where(fn($q2) =>
+                $q2->where('title_ar', 'like', "%{$request->search}%")
+                   ->orWhere('title_en', 'like', "%{$request->search}%")
+                   ->orWhere('project_number', 'like', "%{$request->search}%")
             )
-            ->when($request->is_discussed, fn($q) => $q->where('is_discussed', $request->is_discussed == '1'))
-            ->when($request->is_archived, fn($q) => $q->where('is_archived', $request->is_archived == '1'));
+        )
+        ->when($request->is_discussed, fn($q) => $q->where('is_discussed', $request->is_discussed == '1'))
+        ->when($request->is_archived, fn($q) => $q->where('is_archived', $request->is_archived == '1'));
 
-        // للطلاب: عرض مشاريعهم فقط
-        if (Auth::user()->isStudent()) {
-            $query->whereHas('students', fn($q) => $q->where('student_id', Auth::id()));
-        }
-
-        // للمشرفين: عرض مشاريعهم
-        if (Auth::user()->isSupervisor()) {
-            $query->where(
-                fn($q) =>
-                $q->where('supervisor_id', Auth::id())
-                    ->orWhere('co_supervisor_id', Auth::id())
-            );
-        }
-
-        $projects = $query->latest()->paginate(12)->withQueryString();
-        $semesters = Semester::orderByDesc('id')->get();
-        $departments = Department::where('is_active', true)->get();
-
-        return view('projects.index', compact('projects', 'semesters', 'departments'));
+    // للطلاب: عرض مشاريعهم فقط (أو إذا طلب الفلتر 'my')
+    if (Auth::user()->isStudent() || $request->status === 'my') {
+        $query->whereHas('students', fn($q) =>
+            $q->where('project_students.student_id', Auth::id())
+        );
     }
+
+    // للمشرفين: عرض مشاريعهم
+    if (Auth::user()->isSupervisor()) {
+        $query->where(fn($q) =>
+            $q->where('supervisor_id', Auth::id())
+              ->orWhere('co_supervisor_id', Auth::id())
+        );
+    }
+
+    $projects    = $query->latest()->paginate(12)->withQueryString();
+    $semesters   = Semester::orderByDesc('id')->get();
+    $departments = Department::where('is_active', true)->get();
+
+    return view('projects.index', compact('projects', 'semesters', 'departments'));
+}
 
     // إنشاء مشروع جديد
     public function create()
@@ -392,14 +393,20 @@ class ProjectController extends Controller
             ->when(
                 $request->search,
                 fn($q) =>
-                $q->where('title_ar', 'like', "%{$request->search}%")
+                $q->where(
+                    fn($q2) =>
+                    $q2->where('title_ar', 'like', "%{$request->search}%")
+                        ->orWhere('title_en', 'like', "%{$request->search}%")
+                        ->orWhere('project_number', 'like', "%{$request->search}%")
+                )
             )
-            ->when($request->type, fn($q) => $q->byType($request->type))
-            ->paginate(15);
+            ->when($request->type, fn($q) => $q->where('project_type', $request->type))
+            ->latest('archived_at')
+            ->paginate(15)
+            ->withQueryString();
 
         return view('projects.archived', compact('projects'));
     }
-
     // حذف المشروع
     public function destroy(Project $project)
     {

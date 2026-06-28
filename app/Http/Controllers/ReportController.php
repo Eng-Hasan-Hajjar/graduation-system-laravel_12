@@ -30,16 +30,18 @@ class ReportController extends Controller
         return view('reports.index', compact('reports'));
     }
 
-    public function create(Request $request)
-    {
-        $projects = Auth::user()->isStudent()
-            ? Auth::user()->studentProjects()->whereIn('status', ['approved','in_progress'])->get()
-            : Project::where('supervisor_id', Auth::id())->get();
+public function create(Request $request)
+{
+    $projects = Auth::user()->isStudent()
+        ? Auth::user()->studentProjects()
+              ->whereIn('projects.status', ['approved', 'in_progress'])  // ← projects.status
+              ->get()
+        : Project::where('supervisor_id', Auth::id())->get();
 
-        $selectedProject = $request->project_id ? Project::find($request->project_id) : null;
+    $selectedProject = $request->project_id ? Project::find($request->project_id) : null;
 
-        return view('reports.create', compact('projects', 'selectedProject'));
-    }
+    return view('reports.create', compact('projects', 'selectedProject'));
+}
 
     public function store(Request $request)
     {

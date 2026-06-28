@@ -11,13 +11,13 @@ class UniversitySeeder extends Seeder
     {
         DB::table('universities')->insert([
             [
-                'name_ar'    => 'جامعة الملك عبدالعزيز',
-                'name_en'    => 'King Abdulaziz University',
+                'name_ar'    => 'جامعة  حلب',
+                'name_en'    => ' Aleppo University',
                 'website'    => 'https://www.kau.edu.sa',
                 'email'      => 'info@kau.edu.sa',
-                'phone'      => '+966-12-695-2000',
-                'address_ar' => 'جدة، المملكة العربية السعودية',
-                'address_en' => 'Jeddah, Saudi Arabia',
+                'phone'      => '+963-12-695-2000',
+                'address_ar' => 'حلب سوريا   ',
+                'address_en' => 'Aleppo, Syria ',
                 'is_active'  => true,
                 'created_at' => now(),
                 'updated_at' => now(),
